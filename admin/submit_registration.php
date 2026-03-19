@@ -32,12 +32,15 @@ function validatePhone($phone) {
 }
 
 // Response function
-function sendResponse($success, $message, $data = null) {
+function sendResponse($success, $message, $data = null, $errors = []) {
     header('Content-Type: application/json');
     echo json_encode([
         'success' => $success,
         'message' => $message,
-        'data' => $data
+        'data' => $data,
+        'errors' => array_values(array_filter($errors, function ($value) {
+            return is_string($value) && trim($value) !== '';
+        }))
     ]);
     exit;
 }
@@ -373,7 +376,7 @@ if ($hasNetwork) {
 
 // Check for validation errors
 if (!empty($errors)) {
-    sendResponse(false, 'Validation errors: ' . implode(', ', $errors));
+    sendResponse(false, 'Please correct the highlighted registration issues and try again.', null, $errors);
 }
 
 // Prepare data for storage

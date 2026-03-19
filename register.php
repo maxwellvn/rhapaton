@@ -3539,7 +3539,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         confirmButtonColor: '#000080'
                     }).then(() => { window.location.reload(); });
                 } else {
-                    showErrorMessage(data.message);
+                    showErrorMessage(data.message, data.errors || []);
                 }
             }
         })
@@ -3577,12 +3577,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Function to show error message (SweetAlert2)
-    function showErrorMessage(message) {
+    function showErrorMessage(message, errors = []) {
         const t = (i18n[currentLang] || i18n.en);
+        const safeMessage = esc(message || 'An error occurred.');
+        const errorItems = Array.isArray(errors)
+            ? errors
+                .map(item => typeof item === 'string' ? item.trim() : '')
+                .filter(Boolean)
+                .map(item => `<li class="text-left">${esc(item)}</li>`)
+                .join('')
+            : '';
+        const detailsHtml = errorItems
+            ? `<ul class="mt-4 list-disc pl-5 space-y-2 text-sm sm:text-base text-gray-700">${errorItems}</ul>`
+            : '';
         Swal.fire({
             icon: 'error',
             title: t.alerts.error_title,
-            html: `<p class="text-sm sm:text-base text-gray-700">${esc(message)}</p>`,
+            html: `<p class="text-sm sm:text-base text-gray-700">${safeMessage}</p>${detailsHtml}`,
             confirmButtonText: t.buttons.ok,
             confirmButtonColor: '#000080',
             background: '#ffffff',
