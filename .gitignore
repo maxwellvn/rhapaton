@@ -1,0 +1,36 @@
+
+.clinerules/byterover-rules.md
+.kilocode/rules/byterover-rules.md
+.roo/rules/byterover-rules.md
+.windsurf/rules/byterover-rules.md
+.cursor/rules/byterover-rules.mdc
+.kiro/steering/byterover-rules.md
+.qoder/rules/byterover-rules.md
+.augment/rules/byterover-rules.md
+
+# Environment & secrets
+.env
+.env.local
+secure_data/kc_config.json
+secure_data/kc_remote.php
+secure_data/admin_auth.php
+secure_data/registrations.json
+secure_data/kingschat_outbox.json
+kingschat/kc_config.json
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+**/.DS_Store
+
+# Logs
+api/logs/*.log
+*.log
+
+# Backup files
+*.backup
+
+# Embedded submodule - include as submodule or ignore
+kingschat/

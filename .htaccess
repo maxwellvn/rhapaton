@@ -1,0 +1,49 @@
+RewriteEngine On
+
+Options -Indexes
+
+# Security - block access to sensitive files and directories
+<Files "*.log">
+    Require all denied
+</Files>
+
+# Block access to secure_data directory (contains sensitive JSON files)
+RewriteRule ^secure_data/ - [F,L]
+
+# Block access to includes directory
+RewriteRule ^includes/ - [F,L]
+
+# Restrict admin submission handler to POST only (block GET/others)
+RewriteCond %{REQUEST_METHOD} !POST
+RewriteRule ^admin/submit_registration\.php$ - [F,L]
+
+# Allow data directory access (public JSON files only)
+RewriteRule ^data/ - [L]
+
+# Route bare /admin to dashboard
+RewriteRule ^admin/?$ admin/dashboard.php [L]
+
+# Allow admin directory access (except sensitive files)
+RewriteRule ^admin/(?!submit_registration\.php) - [L]
+
+# If the file exists, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# If the directory exists, serve it directly
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Try to find the file in the root directory first
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# If not found in root, try the pages directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ pages/$1.php [L]
+
+# Restrict delete endpoint to POST only
+RewriteCond %{REQUEST_METHOD} !POST
+RewriteRule ^admin/delete_registration\.php$ - [F,L]
