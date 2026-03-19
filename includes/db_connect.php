@@ -61,7 +61,14 @@ if (!function_exists('db_connection')) {
 
         $config = db_config();
 
-        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        if (!class_exists('mysqli')) {
+            throw new RuntimeException('PHP mysqli extension is not installed');
+        }
+
+        if (function_exists('mysqli_report')) {
+            mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        }
+
         $connection = new mysqli(
             $config['host'],
             $config['user'],
