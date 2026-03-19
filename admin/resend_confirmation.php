@@ -20,6 +20,7 @@ if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
     session_set_cookie_params(0, '/', '', $is_https, true);
 }
 session_start();
+require_once __DIR__ . '/../includes/storage.php';
 
 // Enable robust JSON error handling to avoid blank 500s
 ob_start();
@@ -67,17 +68,7 @@ if ($id === '') {
 }
 
 // Load data
-$data_file = __DIR__ . '/../secure_data/registrations.json';
-if (!is_file($data_file)) {
-    echo json_encode(['success' => false, 'message' => 'No registrations found']);
-    exit;
-}
-$registrations = json_decode(file_get_contents($data_file), true) ?: [];
-
-$target = null;
-foreach ($registrations as $r) {
-    if (($r['id'] ?? '') === $id) { $target = $r; break; }
-}
+$target = registration_storage_find_by_id($id);
 if (!$target) {
     echo json_encode(['success' => false, 'message' => 'Registration not found']);
     exit;
@@ -163,13 +154,6 @@ $regDate = date('M j, Y', strtotime($target['timestamp'] ?? 'now'));
 $res = kc_send_text_message($userId, $msg);
 $ok = is_array($res) ? ($res['ok'] ?? false) : false;
 
-// Outbox log
-$outbox_path = __DIR__ . '/../secure_data/kingschat_outbox.json';
-$list = [];
-if (is_file($outbox_path)) {
-    $o = @file_get_contents($outbox_path);
-    $list = json_decode($o, true) ?: [];
-}
 $entry = [
     'timestamp' => date('Y-m-d H:i:s'),
     'origin' => 'manual_resend',
@@ -180,8 +164,7 @@ $entry = [
     'status' => $ok ? 'sent' : 'failed',
 ];
 if (!$ok) { $entry['error'] = $res['error'] ?? ('HTTP ' . ($res['status'] ?? 0)); }
-$list[] = $entry;
-@file_put_contents($outbox_path, json_encode($list, JSON_PRETTY_PRINT));
+outbox_storage_append($entry);
 
 if ($ok) {
     echo json_encode(['success' => true, 'message' => 'Confirmation sent']);

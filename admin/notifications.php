@@ -21,6 +21,7 @@ if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
     session_set_cookie_params(0, '/', '', $is_https, true);
 }
 session_start();
+require_once __DIR__ . '/../includes/storage.php';
 require_once __DIR__ . '/../kingschat/helpers.php';
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
@@ -53,10 +54,7 @@ if (isset($_GET['logout'])) {
         if (file_exists($kc_config_file)) {
             $config = json_decode(file_get_contents($kc_config_file), true);
             if (is_array($config)) {
-                // Remove tokens but keep other config
-                unset($config['access_token']);
-                unset($config['expires_at']);
-                // Keep refresh_token and sender_user_id for future use
+                unset($config['access_token'], $config['expires_at']);
                 file_put_contents($kc_config_file, json_encode($config, JSON_PRETTY_PRINT));
             }
         }
@@ -170,12 +168,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 }
 
 // Load registrations
-$data_file = __DIR__ . '/../secure_data/registrations.json';
-$registrations = [];
-if (is_file($data_file)) {
-    $json = file_get_contents($data_file);
-    $registrations = json_decode($json, true) ?: [];
-}
+$registrations = registration_storage_all();
 
 // Extract entries with KingsChat usernames and additional info for filtering
 $targets = [];

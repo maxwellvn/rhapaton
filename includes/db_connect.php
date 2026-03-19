@@ -2,9 +2,43 @@
 
 require_once __DIR__ . '/env.php';
 
+if (!function_exists('db_config_from_url')) {
+    function db_config_from_url(string $databaseUrl): ?array
+    {
+        $parts = parse_url($databaseUrl);
+        if (!is_array($parts) || (($parts['scheme'] ?? '') !== 'mysql')) {
+            return null;
+        }
+
+        $path = (string) ($parts['path'] ?? '');
+        $dbName = ltrim($path, '/');
+
+        return [
+            'host' => (string) ($parts['host'] ?? '127.0.0.1'),
+            'port' => (int) ($parts['port'] ?? 3306),
+            'name' => $dbName !== '' ? $dbName : 'rhapaton',
+            'user' => urldecode((string) ($parts['user'] ?? 'root')),
+            'pass' => urldecode((string) ($parts['pass'] ?? '')),
+            'charset' => 'utf8mb4',
+        ];
+    }
+}
+
 if (!function_exists('db_config')) {
     function db_config(): array
     {
+        $databaseUrl = (string) app_env('DATABASE_URL', '');
+        if ($databaseUrl !== '') {
+            $parsed = db_config_from_url($databaseUrl);
+            if (is_array($parsed)) {
+                $charset = (string) app_env('DB_CHARSET', '');
+                if ($charset !== '') {
+                    $parsed['charset'] = $charset;
+                }
+                return $parsed;
+            }
+        }
+
         return [
             'host' => app_env('DB_HOST', '127.0.0.1'),
             'port' => (int) app_env('DB_PORT', '3306'),

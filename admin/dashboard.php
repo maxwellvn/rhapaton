@@ -19,6 +19,7 @@ if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
     session_set_cookie_params(0, '/', '', $is_https, true);
 }
 session_start();
+require_once __DIR__ . '/../includes/storage.php';
 
 // Security headers
 header('X-Content-Type-Options: nosniff');
@@ -157,15 +158,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 }
 
 // Load registration data
-$storage_file = '../secure_data/registrations.json';
-$registrations = [];
-
-if (file_exists($storage_file)) {
-    $json_content = file_get_contents($storage_file);
-    if ($json_content !== false) {
-        $registrations = json_decode($json_content, true) ?? [];
-    }
-}
+$registrations = registration_storage_all();
 
 // Sort registrations by timestamp (newest first)
 usort($registrations, function($a, $b) {
@@ -173,21 +166,7 @@ usort($registrations, function($a, $b) {
 });
 
 // Load KingsChat outbox statuses to reflect confirmation message state
-$kc_outbox_file = __DIR__ . '/../secure_data/kingschat_outbox.json';
-$kc_status_by_reg = [];
-if (is_file($kc_outbox_file)) {
-    $ob = json_decode(@file_get_contents($kc_outbox_file), true) ?: [];
-    // Use the latest entry per registration id, prefer a 'sent' if present
-    foreach ($ob as $row) {
-        $rid = $row['registration_id'] ?? '';
-        if ($rid === '') continue;
-        $status = $row['status'] ?? '';
-        // Prioritize sent over others; otherwise keep the latest seen
-        if (!isset($kc_status_by_reg[$rid]) || $status === 'sent') {
-            $kc_status_by_reg[$rid] = $status;
-        }
-    }
-}
+$kc_status_by_reg = outbox_storage_latest_status_by_registration();
 
 // Compute base prefix for links (handles subdirectory deployments)
 $__script = $_SERVER['SCRIPT_NAME'] ?? '/admin/dashboard.php';

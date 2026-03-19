@@ -3,6 +3,8 @@ header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
+require_once __DIR__ . '/../includes/storage.php';
+
 function fetchRemoteJson(string $url): ?array
 {
     $payload = null;
@@ -121,28 +123,22 @@ if (is_file($fallbackPath)) {
 }
 
 $churchesByZone = [];
-$storagePath = __DIR__ . '/../secure_data/registrations.json';
-if (is_file($storagePath)) {
-    $saved = json_decode((string) file_get_contents($storagePath), true);
-    if (is_array($saved)) {
-        foreach ($saved as $registration) {
-            $churchInfo = is_array($registration['church_info'] ?? null) ? $registration['church_info'] : [];
-            $zone = normalizeText((string) ($churchInfo['zone'] ?? ''));
-            $group = normalizeText((string) ($churchInfo['group'] ?? ''));
-            $church = normalizeText((string) ($churchInfo['church'] ?? ''));
-
-            if ($zone !== '') {
-                $zones[] = $zone;
-                $groupsByZone[$zone] = $groupsByZone[$zone] ?? [];
-            }
-            if ($zone !== '' && $group !== '') {
-                $groupsByZone[$zone][] = $group;
-            }
-            if ($zone !== '' && $church !== '') {
-                $churchesByZone[$zone] = $churchesByZone[$zone] ?? [];
-                $churchesByZone[$zone][] = $church;
-            }
-        }
+$saved = registration_storage_directory_data();
+foreach ($saved['zones'] as $zone) {
+    $zones[] = normalizeText((string) $zone);
+}
+foreach ($saved['groupsByZone'] as $zone => $groups) {
+    $zoneName = normalizeText((string) $zone);
+    $groupsByZone[$zoneName] = $groupsByZone[$zoneName] ?? [];
+    foreach ($groups as $group) {
+        $groupsByZone[$zoneName][] = normalizeText((string) $group);
+    }
+}
+foreach ($saved['churchesByZone'] as $zone => $churches) {
+    $zoneName = normalizeText((string) $zone);
+    $churchesByZone[$zoneName] = $churchesByZone[$zoneName] ?? [];
+    foreach ($churches as $church) {
+        $churchesByZone[$zoneName][] = normalizeText((string) $church);
     }
 }
 

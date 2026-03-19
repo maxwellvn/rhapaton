@@ -11,6 +11,8 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 1; mode=block');
 
+require_once __DIR__ . '/../includes/storage.php';
+
 // Function to sanitize input data
 function sanitizeInput($data) {
     $data = trim($data);
@@ -264,38 +266,17 @@ foreach ($optional_fields as $field) {
 
 // Check for duplicate registrations
 if (!empty($sanitized_data['email'])) {
-    // Load existing registrations to check for duplicates
-    $data_file = __DIR__ . '/../secure_data/registrations.json';
-    $existing_registrations = [];
-    if (is_file($data_file)) {
-        $json = file_get_contents($data_file);
-        $existing_registrations = json_decode($json, true) ?: [];
+    $duplicates = registration_storage_duplicate_status(
+        (string) $sanitized_data['email'],
+        (string) ($sanitized_data['kingschat_username'] ?? '')
+    );
+
+    if (!empty($duplicates['email'])) {
+        $errors[] = "This email address has already been registered. If this is your email, please contact support at <a href='https://kingschat.online/user/kingsblast' target='_blank' style='color: #D4AF37; text-decoration: underline;'>KingsChat: @kingsblast</a> or use a different email address.";
     }
 
-    $submitted_email = strtolower(trim($sanitized_data['email']));
-    $submitted_kingschat = isset($sanitized_data['kingschat_username']) ? strtolower(trim($sanitized_data['kingschat_username'])) : '';
-
-    // Check for email duplicate
-    foreach ($existing_registrations as $existing) {
-        $existing_email = strtolower(trim($existing['personal_info']['email'] ?? ''));
-        if ($existing_email === $submitted_email) {
-            $errors[] = "This email address has already been registered. If this is your email, please contact support at <a href='https://kingschat.online/user/kingsblast' target='_blank' style='color: #D4AF37; text-decoration: underline;'>KingsChat: @kingsblast</a> or use a different email address.";
-            break;
-        }
-    }
-
-    // Check for KingsChat username duplicate (if provided)
-    if (!empty($submitted_kingschat)) {
-        $submitted_kingschat_clean = ltrim($submitted_kingschat, '@');
-        foreach ($existing_registrations as $existing) {
-            $existing_kingschat = strtolower(trim($existing['personal_info']['kingschat_username'] ?? ''));
-            $existing_kingschat_clean = ltrim($existing_kingschat, '@');
-
-            if (!empty($existing_kingschat_clean) && $existing_kingschat_clean === $submitted_kingschat_clean) {
-                $errors[] = "This KingsChat username has already been registered. Please use a different KingsChat username or contact support at <a href='https://kingschat.online/user/kingsblast' target='_blank' style='color: #D4AF37; text-decoration: underline;'>KingsChat: @kingsblast</a>.";
-                break;
-            }
-        }
+    if (!empty($duplicates['kingschat'])) {
+        $errors[] = "This KingsChat username has already been registered. Please use a different KingsChat username or contact support at <a href='https://kingschat.online/user/kingsblast' target='_blank' style='color: #D4AF37; text-decoration: underline;'>KingsChat: @kingsblast</a>.";
     }
 }
 
@@ -429,54 +410,11 @@ $registration_data = [
     'language_preference' => $sanitized_data['preferred_language']
 ];
 
-// Define secure storage path using an absolute path relative to this file
-$storage_file = __DIR__ . '/../secure_data/registrations.json';
-
-// Create directory if it doesn't exist
-$storage_dir = dirname($storage_file);
-if (!is_dir($storage_dir)) {
-    if (!mkdir($storage_dir, 0755, true)) {
-        sendResponse(false, 'Unable to create storage directory: ' . $storage_dir);
-    }
+try {
+    registration_storage_insert($registration_data);
+} catch (Throwable $e) {
+    sendResponse(false, 'Unable to save registration data: ' . $e->getMessage());
 }
-
-// Check directory writability early to provide a clear error
-if (!is_writable($storage_dir)) {
-    sendResponse(false, 'Storage directory is not writable: ' . $storage_dir . ' — please adjust filesystem permissions');
-}
-
-// Read existing data
-$existing_data = [];
-if (file_exists($storage_file)) {
-    $json_content = file_get_contents($storage_file);
-    if ($json_content !== false) {
-        $existing_data = json_decode($json_content, true) ?? [];
-    }
-}
-
-// Add new registration
-$existing_data[] = $registration_data;
-
-// Save data with atomic write (write to temp file first, then rename)
-$temp_file = $storage_file . '.tmp';
-$json_data = json_encode($existing_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-if ($json_data === false) {
-    sendResponse(false, 'Failed to encode registration data to JSON: ' . json_last_error_msg());
-}
-
-if (file_put_contents($temp_file, $json_data, LOCK_EX) === false) {
-    $err = error_get_last();
-    sendResponse(false, 'Unable to save registration data: ' . ($err['message'] ?? 'unknown error'));
-}
-
-if (!@rename($temp_file, $storage_file)) {
-    @unlink($temp_file); // Clean up temp file
-    $err = error_get_last();
-    sendResponse(false, 'Unable to finalize registration data: ' . ($err['message'] ?? 'unknown error'));
-}
-
-// Set appropriate file permissions
-@chmod($storage_file, 0644);
 
 // Try to send KingsChat notification to the registrant (best-effort)
 try {
@@ -511,15 +449,8 @@ try {
         }
 
         // Proceed only if we have an auth path (session token or remote mode)
-        $outbox_path = __DIR__ . '/../secure_data/kingschat_outbox.json';
-        $append_outbox = function(array $entry) use ($outbox_path) {
-            $list = [];
-            if (is_file($outbox_path)) {
-                $o = @file_get_contents($outbox_path);
-                $list = json_decode($o, true) ?: [];
-            }
-            $list[] = $entry;
-            @file_put_contents($outbox_path, json_encode($list, JSON_PRETTY_PRINT));
+        $append_outbox = function(array $entry) {
+            outbox_storage_append($entry);
         };
 
         if (kc_remote_enabled() || kc_is_authenticated()) {

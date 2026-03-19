@@ -20,6 +20,7 @@ if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
     session_set_cookie_params(0, '/', '', $is_https, true);
 }
 session_start();
+require_once __DIR__ . '/../includes/storage.php';
 
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
@@ -57,12 +58,7 @@ if ($message === '') {
 }
 
 // Load registrations
-$data_file = __DIR__ . '/../secure_data/registrations.json';
-$registrations = [];
-if (is_file($data_file)) {
-    $json = file_get_contents($data_file);
-    $registrations = json_decode($json, true) ?: [];
-}
+$registrations = registration_storage_all();
 
 $targets = [];
 foreach ($registrations as $reg) {
@@ -122,14 +118,6 @@ if (!empty($selectedRecipients)) {
     error_log("Notification filtering: Selected $selectedCount recipients, found $filteredCount valid targets");
 }
 
-// Prepare outbox log
-$outbox_path = __DIR__ . '/../secure_data/kingschat_outbox.json';
-$outbox = [];
-if (is_file($outbox_path)) {
-    $o = file_get_contents($outbox_path);
-    $outbox = json_decode($o, true) ?: [];
-}
-
 // Streaming helper
 function stream_event(array $data) {
     echo json_encode($data) . "\n";
@@ -153,13 +141,13 @@ foreach ($targets as $t) {
             $tokenRefreshed = @ensureValidToken(300); // Refresh if expires within 5 minutes
             if (!$tokenRefreshed) {
                 $failed++;
-                $outbox[] = [
+                outbox_storage_append([
                     'timestamp' => date('Y-m-d H:i:s'),
                     'username' => $username,
                     'name' => $name,
                     'message' => $personalized,
                     'status' => 'token_refresh_failed'
-                ];
+                ]);
                 stream_event(['type' => 'progress', 'sent' => $sent, 'total' => $total, 'message' => "Token refresh failed for @$username - skipping"]);
                 continue;
             } else {
@@ -173,13 +161,13 @@ foreach ($targets as $t) {
     $user_id = kc_lookup_user_id($username);
     if (!$user_id) {
         $failed++;
-        $outbox[] = [
+        outbox_storage_append([
             'timestamp' => date('Y-m-d H:i:s'),
             'username' => $username,
             'name' => $name,
             'message' => $personalized,
             'status' => 'lookup_failed'
-        ];
+        ]);
         stream_event(['type' => 'progress', 'sent' => $sent, 'total' => $total, 'message' => "Lookup failed for @$username"]);
         continue;
     }
@@ -188,34 +176,31 @@ foreach ($targets as $t) {
     $res = kc_send_text_message($user_id, $personalized);
     if ($res['ok']) {
         $sent++;
-        $outbox[] = [
+        outbox_storage_append([
             'timestamp' => date('Y-m-d H:i:s'),
             'username' => $username,
             'name' => $name,
             'message' => $personalized,
             'status' => 'sent'
-        ];
+        ]);
         stream_event(['type' => 'progress', 'sent' => $sent, 'total' => $total, 'message' => "Sent to @$username"]);
     } else {
         $failed++;
         $code = $res['status'] ?? 0;
-        $outbox[] = [
+        outbox_storage_append([
             'timestamp' => date('Y-m-d H:i:s'),
             'username' => $username,
             'name' => $name,
             'message' => $personalized,
             'status' => 'failed',
             'error' => $res['error'] ?? ('HTTP ' . $code)
-        ];
+        ]);
         stream_event(['type' => 'progress', 'sent' => $sent, 'total' => $total, 'message' => "Failed @$username (" . ($res['error'] ?? ('HTTP ' . $code)) . ")"]);
     }
 
     // Be polite to API
     usleep(150000); // 150ms
 }
-
-// Persist outbox
-file_put_contents($outbox_path, json_encode($outbox, JSON_PRETTY_PRINT));
 
 // Provide detailed completion message
 $completionMessage = 'Broadcast finished';

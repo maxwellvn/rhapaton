@@ -14,6 +14,7 @@ if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
     session_set_cookie_params(0, '/', '', $is_https, true);
 }
 session_start();
+require_once __DIR__ . '/../includes/storage.php';
 
 // Security headers
 header('X-Content-Type-Options: nosniff');
@@ -52,45 +53,13 @@ if ($id === '') {
     json_response(false, 'Missing registration ID');
 }
 
-$storage_file = __DIR__ . '/../secure_data/registrations.json';
-if (!file_exists($storage_file)) {
-    json_response(false, 'Storage file not found');
-}
-
-$json = file_get_contents($storage_file);
-$data = json_decode($json, true);
-if (!is_array($data)) {
-    json_response(false, 'Invalid storage format');
-}
-
-$original_count = count($data);
-$filtered = array_values(array_filter($data, function ($reg) use ($id) {
-    return isset($reg['id']) && $reg['id'] !== $id;
-}));
-
-if (count($filtered) === $original_count) {
+if (!registration_storage_find_by_id($id)) {
     json_response(false, 'Registration not found');
 }
 
-// Atomic write
-$temp = $storage_file . '.tmp';
-$encoded = json_encode($filtered, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-if ($encoded === false) {
-    json_response(false, 'Failed to encode data: ' . json_last_error_msg());
+if (!registration_storage_delete($id)) {
+    json_response(false, 'Unable to delete registration');
 }
-
-if (file_put_contents($temp, $encoded, LOCK_EX) === false) {
-    $err = error_get_last();
-    json_response(false, 'Unable to write temp file: ' . ($err['message'] ?? 'unknown'));
-}
-
-if (!@rename($temp, $storage_file)) {
-    @unlink($temp);
-    $err = error_get_last();
-    json_response(false, 'Unable to finalize delete: ' . ($err['message'] ?? 'unknown'));
-}
-
-@chmod($storage_file, 0644);
 
 json_response(true, 'Registration deleted');
 ?>

@@ -1,6 +1,8 @@
 <?php
 // Check for duplicate email and KingsChat username registrations
 
+require_once __DIR__ . '/../includes/storage.php';
+
 header('X-Content-Type-Options: nosniff');
 header('Content-Type: application/json');
 
@@ -13,45 +15,15 @@ if (!isset($_POST['action']) || $_POST['action'] !== 'check_duplicates') {
 $email = trim($_POST['email'] ?? '');
 $kingschat_username = trim($_POST['kingschat_username'] ?? '');
 
-// Load existing registrations
-$data_file = __DIR__ . '/../secure_data/registrations.json';
-$existing_registrations = [];
-if (is_file($data_file)) {
-    $json = file_get_contents($data_file);
-    $existing_registrations = json_decode($json, true) ?: [];
-}
-
 $errors = [];
+$duplicates = registration_storage_duplicate_status($email, $kingschat_username);
 
-// Check for duplicate email
-if (!empty($email)) {
-    $submitted_email = strtolower($email);
-    foreach ($existing_registrations as $existing) {
-        $existing_email = strtolower(trim($existing['personal_info']['email'] ?? ''));
-        if ($existing_email === $submitted_email) {
-            $errors[] = "Email address already registered";
-            break;
-        }
-    }
+if (!empty($duplicates['email'])) {
+    $errors[] = 'Email address already registered';
 }
 
-// Check for duplicate KingsChat username
-if (!empty($kingschat_username)) {
-    // Normalize KingsChat username
-    if (!str_starts_with($kingschat_username, '@')) {
-        $kingschat_username = '@' . $kingschat_username;
-    }
-
-    $submitted_kingschat_clean = ltrim(strtolower($kingschat_username), '@');
-    foreach ($existing_registrations as $existing) {
-        $existing_kingschat = strtolower(trim($existing['personal_info']['kingschat_username'] ?? ''));
-        $existing_kingschat_clean = ltrim($existing_kingschat, '@');
-
-        if (!empty($existing_kingschat_clean) && $existing_kingschat_clean === $submitted_kingschat_clean) {
-            $errors[] = "KingsChat username already registered";
-            break;
-        }
-    }
+if (!empty($duplicates['kingschat'])) {
+    $errors[] = 'KingsChat username already registered';
 }
 
 // Return result
