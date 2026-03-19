@@ -50,5 +50,3 @@ class Routes {
 Routes::add('home', 'register');
 Routes::add('register', 'register');
 Routes::add('admin', 'admin/dashboard');
-
-?> 
