@@ -275,11 +275,11 @@ if (!empty($sanitized_data['email'])) {
     );
 
     if (!empty($duplicates['email'])) {
-        $errors[] = "This email address has already been registered. If this is your email, please contact support at <a href='https://kingschat.online/user/kingsblast' target='_blank' style='color: #D4AF37; text-decoration: underline;'>KingsChat: @kingsblast</a> or use a different email address.";
+        $errors[] = 'This email address has already been registered. If this is your email, please contact support on KingsChat: @kingsblast, or use a different email address.';
     }
 
     if (!empty($duplicates['kingschat'])) {
-        $errors[] = "This KingsChat username has already been registered. Please use a different KingsChat username or contact support at <a href='https://kingschat.online/user/kingsblast' target='_blank' style='color: #D4AF37; text-decoration: underline;'>KingsChat: @kingsblast</a>.";
+        $errors[] = 'This KingsChat username has already been registered. Please use a different KingsChat username or contact support on KingsChat: @kingsblast.';
     }
 }
 

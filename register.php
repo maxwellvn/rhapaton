@@ -3562,18 +3562,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to show success message (SweetAlert2)
     function showSuccessMessage(message, data) {
-        const t = (i18n[currentLang] || i18n.en);
-        Swal.fire({
-            icon: 'success',
-            title: t.alerts.success_title,
-            html: `<p class="text-sm sm:text-base text-gray-700">${esc(message)}</p>`,
-            confirmButtonText: t.buttons.confirm,
-            confirmButtonColor: '#000080',
-            background: '#ffffff',
-            color: '#111827',
-        }).then(() => {
-            window.location.reload();
-        });
+        const params = new URLSearchParams();
+        if (data && data.registration_id) params.set('registration_id', data.registration_id);
+        if (data && data.name) params.set('name', data.name);
+        params.set('lang', currentLang || 'en');
+        window.location.href = `registration-success.php?${params.toString()}`;
     }
     
     // Function to show error message (SweetAlert2)
