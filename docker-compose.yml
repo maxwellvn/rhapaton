@@ -4,12 +4,6 @@ services:
     ports:
       - "8080:80"
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: ${DB_NAME:-rhapaton}
-      DB_USER: ${DB_USER:-rhapaton}
-      DB_PASS: ${DB_PASS:-secret}
-      DB_CHARSET: utf8mb4
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
       KC_CLIENT_ID: ${KC_CLIENT_ID:-}
       KC_ACCESS_TOKEN: ${KC_ACCESS_TOKEN:-}
@@ -21,27 +15,7 @@ services:
       GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-}
     volumes:
       - secure_data:/var/www/html/secure_data
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_DATABASE: ${DB_NAME:-rhapaton}
-      MYSQL_USER: ${DB_USER:-rhapaton}
-      MYSQL_PASSWORD: ${DB_PASS:-secret}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootsecret}
-    volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
 
 volumes:
-  db_data:
   secure_data:
