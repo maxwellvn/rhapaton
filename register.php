@@ -33,7 +33,7 @@ if (!isset($_SESSION['csrf_token'])) {
 // Also set CSRF cookie for double-submit fallback (not HttpOnly by design)
 setcookie('csrf_token', $_SESSION['csrf_token'], 0, '/', '', $is_https, false);
 
-$page_title = 'Register for Rhapathon - 2026 Edition';
+$page_title = 'The 2026 Rhapathon with Pastor Chris';
 
 // Include header
 include_once 'includes/header.php';
@@ -656,10 +656,10 @@ include_once 'includes/header.php';
         <!-- Event Header -->
         <div class="text-center px-4">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white mb-2 gsap-fade-down" id="headerTitle">
-                Rhapathon with Pastor Chris
+                The 2026 Rhapathon with Pastor Chris
             </h1>
             <h2 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-3 tracking-[0.08em] uppercase gsap-scale-in" id="headerSubtitle">
-                2026 Edition
+                Power the Race to the Last Man
             </h2>
             <div class="mb-4 sm:mb-6">
                 <p class="text-lg sm:text-xl font-medium text-white gsap-fade-up" id="headerDate">
@@ -1392,8 +1392,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const i18n = {
         en: {
             header: {
-                title: 'Rhapathon with Pastor Chris',
-                subtitle: '2026 Edition',
+                title: 'The 2026 Rhapathon with Pastor Chris',
+                subtitle: 'Power the Race to the Last Man',
                 date: 'Monday 4th - Friday 8th May, 2026',
                 desc: 'Join us for an extraordinary time of refinement of vision in the completing of our divine mandate.'
             },
